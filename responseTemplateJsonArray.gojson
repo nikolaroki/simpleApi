@@ -1,0 +1,10 @@
+[
+    {{range .}}
+   {
+    "id":"{{.ID}}",
+    "genre":"{{.Genre}}",
+    "moviName":"{{.Title}}",
+    "director": "{{.Director.Firstname}} {{.Director.Lastname}}"
+    } ,
+    {{end}}
+]
