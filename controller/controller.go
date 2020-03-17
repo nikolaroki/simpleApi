@@ -5,7 +5,6 @@ import (
 	"api/repo"
 	"encoding/json"
 	"encoding/xml"
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -46,7 +45,6 @@ func GetMovies(w http.ResponseWriter, r *http.Request) {
 	}
 
 	movies := repo.GetAllMovies(client)
-	log.Println("*****INFO*****  - controller.go *** movies list return from DB")
 	err := tpl.ExecuteTemplate(w, tbe, movies)
 	if err != nil {
 		log.Println("*****ERROR*****  - controller.go *** error occured during template execution")
@@ -79,7 +77,6 @@ func GetMovie(w http.ResponseWriter, r *http.Request) {
 	}
 
 	movie, err := repo.GetByID(client, params["id"])
-	log.Println("*****INFO*****  - controller.go *** movie return from DB")
 	if err == redis.Nil {
 		log.Println("*****INFO*****  - controller.go *** movie with the" + params["id"] + "ID not found")
 		http.Error(w, "Movie not found", http.StatusNotFound)
@@ -140,7 +137,6 @@ func CreateMovie(w http.ResponseWriter, r *http.Request) {
 
 	movie.ID = strconv.Itoa(int(time.Now().Unix())) // random ID generator, not safe
 	err := repo.Set(client, movie)
-	log.Println("*****INFO*****  - controller.go *** movie created in DB")
 	if err != nil {
 		log.Println("*****ERROR*****  - controller.go *** error occured during save")
 	}
@@ -149,48 +145,58 @@ func CreateMovie(w http.ResponseWriter, r *http.Request) {
 	err = tpl.ExecuteTemplate(w, tbe, movie)
 	if err != nil {
 		log.Println("*****ERROR*****  - controller.go *** error occured during template execution")
-		http.Error(w, "Unable to create movie", http.StatusInternalServerError)
-		log.Fatalln(err)
+		http.Error(w, "Error occured: could not return the created movie, but it was created in DB", http.StatusInternalServerError)
+
 	}
 	log.Println("*****INFO*****  - controller.go *** movie created successfully")
 }
 
 //UpdateMovie controller
 func UpdateMovie(w http.ResponseWriter, r *http.Request) {
+	log.Println("*****INFO*****  - controller.go *** UpdateMovie function entered")
 	params := mux.Vars(r)
 	var updatedMovie model.Movie
 	client := repo.NewClient()
 	var tbe string // template to be executed name
 	if r.Header["Content-Type"][0] != "text/xml" && r.Header["Content-Type"][0] != "application/json" {
 		http.Error(w, "Content Type not supported", http.StatusBadRequest)
+		log.Println("*****INFO*****  - controller.go *** content type not supported")
 		return
 	}
 	if r.Header["Content-Type"][0] == "application/json" {
+		log.Println("*****INFO*****  - controller.go *** content type is JSON and JSON will be returned")
 		w.Header().Set("Content-Type", "application/json")
 		tbe = "responseTemplateJson.gojson"
 		err := json.NewDecoder(r.Body).Decode(&updatedMovie)
 		if err != nil {
-			log.Println(err)
+			log.Println("*****ERROR*****  - controller.go *** error occured during JSON decoding ")
 			http.Error(w, "Unable to update movie", http.StatusBadRequest)
 			return
 		}
+		log.Println("*****INFO*****  - controller.go *** JSON decoded successfully")
 	}
 	if r.Header["Content-Type"][0] == "text/xml" {
+		log.Println("*****INFO*****  - controller.go *** content type is XML and XML will be returned")
 		w.Header().Set("Content-Type", "text/xml")
 		tbe = "responseTemplateXml.goxml"
 		err := xml.NewDecoder(r.Body).Decode(&updatedMovie)
 		if err != nil {
-			log.Println(err)
+			log.Println("*****ERROR*****  - controller.go *** error occured during XML decoding ")
 			http.Error(w, "Unable to update movie", http.StatusBadRequest)
 			return
 		}
+		log.Println("*****INFO*****  - controller.go *** XML decoded successfully")
+
 	}
 	movie, err := repo.GetByID(client, params["id"])
+	log.Println("*****INFO*****  - controller.go *** movie return from DB")
 	if err == redis.Nil {
+		log.Println("*****INFO*****  - controller.go *** movie with the" + params["id"] + "ID not found")
 		http.Error(w, "Movie not found", http.StatusNotFound)
 		return
 	}
 	if err != nil {
+		log.Println("*****ERROR*****  - controller.go *** error occured")
 		log.Fatalln(err)
 	}
 	if !(updatedMovie.Genre == " " || updatedMovie.Genre == "") {
@@ -209,44 +215,48 @@ func UpdateMovie(w http.ResponseWriter, r *http.Request) {
 	}
 	err = repo.Set(client, movie)
 	if err != nil {
-		fmt.Println(err)
+		log.Println("*****ERROR*****  - controller.go *** error occured during save")
 	}
 	err = tpl.ExecuteTemplate(w, tbe, movie)
 	if err != nil {
-		log.Fatalln(err)
-		http.Error(w, "Unable to update movie", http.StatusBadRequest)
+		log.Println("*****ERROR*****  - controller.go *** error occured during template execution")
+		http.Error(w, "Error occured: could not return the updated movie, but it was updated in DB", http.StatusInternalServerError)
 	}
+	log.Println("*****INFO*****  - controller.go *** movie updated successfully")
 }
 
 //DeleteMovie controller
 func DeleteMovie(w http.ResponseWriter, r *http.Request) {
+	log.Println("*****INFO*****  - controller.go *** DeleteMovie function entered")
 	params := mux.Vars(r)
+	client := repo.NewClient()
 	var tbe string // template to be executed name
 
 	if r.Header["Content-Type"][0] == "application/json" {
+		log.Println("*****INFO*****  - controller.go *** content type JSON will be returned")
 		w.Header().Set("Content-Type", "application/json")
 		tbe = "responseTemplateJson.gojson"
 	}
 	if r.Header["Content-Type"][0] == "text/xml" {
+		log.Println("*****INFO*****  - controller.go *** content type XML will be returned")
 		w.Header().Set("Content-Type", "text/xml")
 		tbe = "responseTemplateXml.goxml"
 	}
-
-	client := repo.NewClient()
-
 	movie, err := repo.Delete(client, params["id"])
 
 	if err == redis.Nil {
+		log.Println("*****INFO*****  - controller.go *** movie with the" + params["id"] + "ID not found")
 		http.Error(w, "Movie not found", http.StatusNotFound)
 		return
 	}
 	if err != nil {
+		log.Println("*****ERROR*****  - controller.go *** error occured")
 		log.Fatalln(err)
 	}
 	err = tpl.ExecuteTemplate(w, tbe, movie)
 	if err != nil {
-		log.Fatalln(err)
-		http.Error(w, "Unable to create template", http.StatusBadRequest)
+		log.Println("*****ERROR*****  - controller.go *** error occured during template execution")
+		http.Error(w, "Error occured: could not return the deleted movie, but it was deleted in DB", http.StatusInternalServerError)
 	}
-
+	log.Println("*****INFO*****  - controller.go *** movie deleted successfully")
 }
