@@ -10,6 +10,9 @@ import (
 
 //StartServer - export
 func StartServer() {
+
+	log.Println("*****INFO*****  - server.go *** StartServer function entered")
+
 	r := mux.NewRouter()
 
 	r.HandleFunc("/movies/{type}", controller.GetMovies).Methods("GET")
@@ -18,7 +21,7 @@ func StartServer() {
 	r.HandleFunc("/movies/{id}", controller.UpdateMovie).Methods("PUT")
 	r.HandleFunc("/movies/{id}", controller.DeleteMovie).Methods("DELETE")
 
-	log.Println("Starting Server on port 8080")
+	log.Println("*****INFO*****  - server.go *** Server started successfully on PORT:8080")
 	err := http.ListenAndServe(":8080", r)
-	log.Fatal(err)
+	log.Fatal("*****ERROR*****  - server.go *** Issue starting server ", err)
 }
