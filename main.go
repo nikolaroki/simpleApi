@@ -1,6 +1,7 @@
 package main
 
 import (
+	"api/model"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -14,26 +15,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-/* **************** MODEL **************** */
-
-// Movie struct (Model)
-type Movie struct {
-	ID       string    `json:"id" xml:"id"`
-	Genre    string    `json:"genre" xml:"genre"`
-	Title    string    `json:"title" xml:"title"`
-	Director *Director `json:"director" xml:"director"`
-}
-
-// Director struct
-type Director struct {
-	Firstname string `json:"firstname" xml:"firstname"`
-	Lastname  string `json:"lastname" xml:"lastname"`
-}
-
 var tpl *template.Template
 
 func init() {
-	tpl = template.Must(template.ParseFiles("responseTemplateJson.gojson", "responseTemplateXml.goxml", "responseTemplateJsonArray.gojson", "responseTemplateXmlArray.goxml"))
+	tpl = template.Must(template.ParseGlob("templates/*"))
 }
 
 /* **************** CRUD **************** */
@@ -99,7 +84,7 @@ func getMovie(w http.ResponseWriter, r *http.Request) {
 
 //Post now movie
 func createMovie(w http.ResponseWriter, r *http.Request) {
-	var movie Movie
+	var movie model.Movie
 	client := newClient()
 	var tbe string // template to be executed name
 	if r.Header["Content-Type"][0] != "text/xml" && r.Header["Content-Type"][0] != "application/json" {
@@ -145,7 +130,7 @@ func createMovie(w http.ResponseWriter, r *http.Request) {
 //Update exisiting entry
 func updateMovie(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	var updatedMovie Movie
+	var updatedMovie model.Movie
 	client := newClient()
 	var tbe string // template to be executed name
 	if r.Header["Content-Type"][0] != "text/xml" && r.Header["Content-Type"][0] != "application/json" {
@@ -266,7 +251,7 @@ func newClient() *redis.Client {
 	return client
 }
 
-func set(client *redis.Client, movie Movie) error {
+func set(client *redis.Client, movie model.Movie) error {
 	json, err := json.Marshal(movie)
 	if err != nil {
 		return err
@@ -278,9 +263,9 @@ func set(client *redis.Client, movie Movie) error {
 	return nil
 }
 
-func getByID(client *redis.Client, id string) (Movie, error) {
+func getByID(client *redis.Client, id string) (model.Movie, error) {
 	val, err := client.Get("movie:" + id).Result()
-	movie := Movie{}
+	movie := model.Movie{}
 	if err != nil {
 		log.Println(err)
 		return movie, err
@@ -292,12 +277,12 @@ func getByID(client *redis.Client, id string) (Movie, error) {
 	return movie, err
 }
 
-func getAllMovies(client *redis.Client) []Movie {
+func getAllMovies(client *redis.Client) []model.Movie {
 	movieIDs, err := client.SMembers("movies").Result()
 	if err != nil {
 		log.Println(err)
 	}
-	var movies []Movie
+	var movies []model.Movie
 	for _, movieID := range movieIDs {
 		movie, _ := getByID(client, movieID)
 		movies = append(movies, movie)
@@ -306,7 +291,7 @@ func getAllMovies(client *redis.Client) []Movie {
 
 }
 
-func delete(client *redis.Client, id string) (Movie, error) {
+func delete(client *redis.Client, id string) (model.Movie, error) {
 	movie, err := getByID(client, id)
 	if err == nil {
 		_, err = client.SRem("movies", id).Result()

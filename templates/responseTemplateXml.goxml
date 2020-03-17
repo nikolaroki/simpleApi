@@ -1,0 +1,9 @@
+<movie>
+  <id>{{.ID}}</id>
+  <genre>{{.Genre}}</genre>
+  <moviName>{{.Title}}</moviName>
+    <director>
+        <firstname>{{.Director.Firstname}}</firstname>
+        <firstname>{{.Director.Lastname}}</firstname>
+    </director>
+</movie>
